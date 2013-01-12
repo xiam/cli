@@ -24,55 +24,27 @@
 package cli
 
 import (
-	"fmt"
 	"flag"
-	"os"
+	"fmt"
 )
 
 type helpCommand struct {
-
-}
-
-func (self *helpCommand) Help() error  {
-	fmt.Printf("Help on help.\n")
-	return nil
-}
-
-func (self *helpCommand) Usage() error {
-	fmt.Printf("help <command>\n")
-	return nil
 }
 
 func (self *helpCommand) Execute() error {
+	name := "help"
 
 	if flag.NArg() > 1 {
 
-		name := flag.Arg(1)
+		name = flag.Arg(1)
 
-		entry, ok := commandNames[name]
+		_, ok := commandNames[name]
 
 		if ok == false {
 			return fmt.Errorf("Cannot help! no such command: %s.", name)
 		}
 
-		fmt.Printf("Usage: %s <arguments> %s\n", os.Args[0], entry.Name)
-
-		if entry.Arguments != nil {
-			fmt.Printf("\nArguments for command \"%s\":\n\n", entry.Name)
-			for _, argName := range entry.Arguments {
-				arg := flag.Lookup(argName)
-				if arg == nil {
-					panic(fmt.Sprintf("Flag \"-%s\" is expected for command \"%s\" but it's not defined.", argName, entry.Name))
-				} else {
-					fmt.Printf("\t-%s [%s]: %s\n", arg.Name, arg.DefValue, arg.Usage)
-				}
-			}
-			fmt.Printf("\n")
-		}
-
-	} else {
-		fmt.Printf("Need a command.\n")
 	}
 
-	return nil
+	return Usage(name)
 }

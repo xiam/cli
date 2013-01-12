@@ -42,10 +42,14 @@ func (self *command1) Execute() error {
 }
 
 func TestRegister(t *testing.T) {
-	err := Register("command1", &command1{})
-	if err != nil {
-		t.Errorf("Error: %v\n", err)
-	}
+	Register("command1", Entry{
+		Description: "Actually does nothing.",
+		Command:     &command1{},
+	})
+}
+
+func TestHelp(t *testing.T) {
+	Help("")
 }
 
 func TestUsage(t *testing.T) {

@@ -27,24 +27,49 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"sort"
+	"strings"
 )
 
+// Subcommand.
 type Command interface {
-	Help() error
-	Usage() error
 	Execute() error
 }
 
-var Output = os.Stdout
-
+// Command entry.
 type Entry struct {
-	Name    string
+	Name        string
+	Usage       string
 	Description string
-	Arguments []string
-	Command Command
+	Arguments   []string
+	Command     Command
 }
 
+// Project name.
+var Name string
+
+// Copyright statement.
+var Copyright string
+
+// License notice.
+var License string
+
+// Version string.
+var Version string
+
+// Project's URL.
+var Homepage string
+
+// Author's name
+var Author string
+
+// Author's e-mail
+var AuthorEmail string
+
+// Array of commands.
 var commandList []string
+
+// Command names.
 var commandNames map[string]Entry
 
 func init() {
@@ -53,55 +78,120 @@ func init() {
 
 	Register("help", Entry{
 		Description: "Shows information about an specific command.",
-		Command: &helpCommand{},
+		Usage:       "help <command>",
+		Command:     &helpCommand{},
 	})
 }
 
-func Register(name string, entry Entry) error {
-	entry.Name = name
-	commandList = append(commandList, name)
-	commandNames[name] = entry
-	return nil
-}
-
-func Help() error {
-	fmt.Printf("Usage: %s <arguments> <command>\n\n", os.Args[0])
-	fmt.Printf("Available commands for %s:\n\n", os.Args[0])
-	for name, _ := range commandNames {
-		entry := commandNames[name]
-		fmt.Printf("\t%s\t\t%s\n", name, entry.Description)
-		/*
-		if entry.Arguments != nil {
-			for _, argName := range entry.Arguments {
-				arg := flag.Lookup(argName)
-				fmt.Printf("\t\t\t-%s [%s]: %s\n", arg.Name, arg.DefValue, arg.Usage)
-			}
-		}
-		*/
+// Registers a subcommand.
+func Register(name string, entry Entry) {
+	_, exists := commandNames[name]
+	if exists == false {
+		entry.Name = name
+		commandList = append(commandList, name)
+		commandNames[name] = entry
+	} else {
+		panic(fmt.Sprintf("Command \"%s\" was already registered.\n", name))
 	}
-	fmt.Printf("\nUse \"%s help <command>\" to view more information about that command.\n", os.Args[0])
+}
+
+// Displays a banner with available information (if any).
+func Banner() {
+	banner := []string{}
+	if Name != "" {
+		var name string
+		if Version != "" {
+			name = fmt.Sprintf("%s (%s)", Name, Version)
+		} else {
+			name = Name
+		}
+		if Homepage != "" {
+			name = name + " - " + Homepage
+		}
+		banner = append(banner, name)
+	}
+	if Copyright != "" {
+		if License != "" {
+			banner = append(banner, fmt.Sprintf("%s. %s.", Copyright, License))
+		} else {
+			banner = append(banner, Copyright)
+		}
+	}
+	if Author != "" {
+		if AuthorEmail != "" {
+			banner = append(banner, fmt.Sprintf("by %s <%s>", Author, AuthorEmail))
+		} else {
+			banner = append(banner, fmt.Sprintf("by %s", Author))
+		}
+	}
+	if len(banner) > 0 {
+		fmt.Printf("%s\n\n", strings.Join(banner, "\n"))
+	}
+}
+
+// Shows help for a subcommand.
+func Help(name string) error {
+
+	if sort.StringsAreSorted(commandList) == false {
+		sort.Strings(commandList)
+	}
+
+	if name == "" {
+		fmt.Printf("Usage: %s <arguments> <command>\n\n", os.Args[0])
+		fmt.Printf("Available commands for %s:\n\n", os.Args[0])
+		for _, name := range commandList {
+			entry := commandNames[name]
+			fmt.Printf("\t%s\t\t%s\n", name, entry.Description)
+		}
+		fmt.Printf("\nUse \"%s help <command>\" to view more information about a command.\n", os.Args[0])
+	} else {
+		return Usage(name)
+	}
 	return nil
 }
 
-/* Shows command description given its name. */
+// Shows usage for a subcommand.
 func Usage(name string) error {
-	cmd, ok := commandNames[name]
+	entry, ok := commandNames[name]
 	if ok == false {
 		return fmt.Errorf(`No such command "%s".`, name)
 	}
-	fmt.Printf("usage: %s %s\n\n", os.Args[0], name)
-	return cmd.Command.Usage()
+	if entry.Description != "" {
+		fmt.Printf("Command \"%s\": %s\n", name, entry.Description)
+	}
+	if entry.Usage != "" {
+		fmt.Printf("\nUsage: %s %s\n", os.Args[0], entry.Usage)
+	}
+	if entry.Arguments != nil {
+		fmt.Printf("\nArguments for command \"%s\":\n\n", entry.Name)
+		for _, argName := range entry.Arguments {
+			arg := flag.Lookup(argName)
+			if arg == nil {
+				panic(fmt.Sprintf("Flag \"-%s\" is expected for command \"%s\" but it's not defined.", argName, entry.Name))
+			} else {
+				fmt.Printf("\t-%s [%s]: %s\n", arg.Name, arg.DefValue, arg.Usage)
+			}
+		}
+		fmt.Printf("\n")
+	}
+	return nil
 }
 
-/* Executes a command given its name. */
+// Executes a subcommand.
 func Execute(name string) error {
 	cmd, ok := commandNames[name]
 	if ok == false {
 		return fmt.Errorf(`No such command "%s".`, name)
 	}
-	return cmd.Command.Execute()
+	err := cmd.Command.Execute()
+	if err != nil {
+		Usage(name)
+		fmt.Printf("\n")
+	}
+	return err
 }
 
+// Dispatches the subcommand.
 func Dispatch() error {
 	flag.Parse()
 
@@ -109,7 +199,7 @@ func Dispatch() error {
 		name := flag.Arg(0)
 		return Execute(name)
 	} else {
-		return Help()
+		return Help("")
 	}
 
 	return nil
