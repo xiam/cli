@@ -37,31 +37,50 @@ type Command interface {
 
 var Output = os.Stdout
 
-type commandEntry struct {
+type Entry struct {
 	Name    string
+	Description string
+	Arguments []string
 	Command Command
 }
 
 var commandList []string
-var commandNames map[string]commandEntry
+var commandNames map[string]Entry
 
 func init() {
 	commandList = []string{}
-	commandNames = map[string]commandEntry{}
+	commandNames = map[string]Entry{}
+
+	Register("help", Entry{
+		Description: "Shows information about an specific command.",
+		Command: &helpCommand{},
+	})
 }
 
-func Register(name string, cmd Command) error {
-	entry := commandEntry{
-		Name:    name,
-		Command: cmd,
-	}
+func Register(name string, entry Entry) error {
+	entry.Name = name
 	commandList = append(commandList, name)
 	commandNames[name] = entry
 	return nil
 }
 
-func Help() {
-
+func Help() error {
+	fmt.Printf("Usage: %s <arguments> <command>\n\n", os.Args[0])
+	fmt.Printf("Available commands for %s:\n\n", os.Args[0])
+	for name, _ := range commandNames {
+		entry := commandNames[name]
+		fmt.Printf("\t%s\t\t%s\n", name, entry.Description)
+		/*
+		if entry.Arguments != nil {
+			for _, argName := range entry.Arguments {
+				arg := flag.Lookup(argName)
+				fmt.Printf("\t\t\t-%s [%s]: %s\n", arg.Name, arg.DefValue, arg.Usage)
+			}
+		}
+		*/
+	}
+	fmt.Printf("\nUse \"%s help <command>\" to view more information about that command.\n", os.Args[0])
+	return nil
 }
 
 /* Shows command description given its name. */
@@ -85,9 +104,13 @@ func Execute(name string) error {
 
 func Dispatch() error {
 	flag.Parse()
-	name := flag.Arg(1)
-	if name[0:1] != "-" {
+
+	if flag.NArg() > 0 {
+		name := flag.Arg(0)
 		return Execute(name)
+	} else {
+		return Help()
 	}
+
 	return nil
 }
