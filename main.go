@@ -77,7 +77,7 @@ func init() {
 	commandNames = map[string]Entry{}
 
 	Register("help", Entry{
-		Description: "Shows information about an specific command.",
+		Description: "Shows information about the given command.",
 		Usage:       "help <command>",
 		Command:     &helpCommand{},
 	})
