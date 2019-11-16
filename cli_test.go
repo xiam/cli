@@ -6,25 +6,25 @@ import (
 	"testing"
 )
 
-/* Flags */
-var age = flag.Uint("age", 0, "Your age.")
-var city = flag.String("city", "", "Your city of residence.")
+var (
+	age  = flag.Uint("age", 0, "Your age.")
+	city = flag.String("city", "", "Your city of residence.")
+)
 
-/* Command definition */
 type command1 struct {
 }
 
-func (self *command1) Help() error {
+func (c *command1) Help() error {
 	fmt.Println("This command shows help topics.")
 	return nil
 }
 
-func (self *command1) Usage() error {
+func (c *command1) Usage() error {
 	fmt.Println("This command requires no arguments.")
 	return nil
 }
 
-func (self *command1) Execute() error {
+func (c *command1) Execute() error {
 
 	if *age == 0 {
 		fmt.Printf("You didn't tell me your age.\n")
@@ -43,7 +43,7 @@ func (self *command1) Execute() error {
 
 func TestRegister(t *testing.T) {
 	Register("command1", Entry{
-		Description: "Actually does nothing.",
+		Description: "Asks for your name and location",
 		Command:     &command1{},
 	})
 }
