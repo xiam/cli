@@ -1,42 +1,41 @@
-/*
-  Copyright (c) 2013 José Carlos Nieto, http://xiam.menteslibres.org/
-
-  Permission is hereby granted, free of charge, to any person obtaining
-  a copy of this software and associated documentation files (the
-  "Software"), to deal in the Software without restriction, including
-  without limitation the rights to use, copy, modify, merge, publish,
-  distribute, sublicense, and/or sell copies of the Software, and to
-  permit persons to whom the Software is furnished to do so, subject to
-  the following conditions:
-
-  The above copyright notice and this permission notice shall be
-  included in all copies or substantial portions of the Software.
-
-  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-  MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
-  NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
-  LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
-  OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
-  WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-*/
+// Copyright (c) 2013-today José Nieto, https://xiam.dev
+//
+// Permission is hereby granted, free of charge, to any person obtaining
+// a copy of this software and associated documentation files (the
+// "Software"), to deal in the Software without restriction, including
+// without limitation the rights to use, copy, modify, merge, publish,
+// distribute, sublicense, and/or sell copies of the Software, and to
+// permit persons to whom the Software is furnished to do so, subject to
+// the following conditions:
+//
+// The above copyright notice and this permission notice shall be
+// included in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+// EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+// NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+// LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+// OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+// WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 package cli
 
 import (
 	"flag"
 	"fmt"
+	"log"
 	"os"
 	"sort"
 	"strings"
 )
 
-// Subcommand.
+// Command is a well-defined action for this cli.
 type Command interface {
 	Execute() error
 }
 
-// Command entry.
+// Entry represents a command
 type Entry struct {
 	Name        string
 	Usage       string
@@ -45,32 +44,33 @@ type Entry struct {
 	Command     Command
 }
 
-// Project name.
-var Name string
+var (
+	// Name of the command line tool
+	Name string
 
-// Copyright statement.
-var Copyright string
+	// Copyright statement.
+	Copyright string
 
-// License notice.
-var License string
+	// License notice.
+	License string
 
-// Version string.
-var Version string
+	// Version string.
+	Version string
 
-// Project's URL.
-var Homepage string
+	// Homepage is the project's URL.
+	Homepage string
 
-// Author's name
-var Author string
+	// Author is the name of the author.
+	Author string
 
-// Author's e-mail
-var AuthorEmail string
+	// AuthorEmail is the e-mail of the author.
+	AuthorEmail string
+)
 
-// Array of commands.
-var commandList []string
-
-// Command names.
-var commandNames map[string]Entry
+var (
+	commandList  []string
+	commandNames map[string]Entry
+)
 
 func init() {
 	commandList = []string{}
@@ -83,7 +83,7 @@ func init() {
 	})
 }
 
-// Registers a subcommand.
+// Register registers a subcommand.
 func Register(name string, entry Entry) {
 	_, exists := commandNames[name]
 	if exists == false {
@@ -91,11 +91,11 @@ func Register(name string, entry Entry) {
 		commandList = append(commandList, name)
 		commandNames[name] = entry
 	} else {
-		panic(fmt.Sprintf("Command \"%s\" was already registered.\n", name))
+		log.Fatalf("Command \"%s\" was already registered.\n", name)
 	}
 }
 
-// Displays a banner with available information (if any).
+// Banner displays a banner with information about the cli (if any).
 func Banner() {
 	banner := []string{}
 	if Name != "" {
@@ -129,9 +129,8 @@ func Banner() {
 	}
 }
 
-// Shows help for a subcommand.
+// Help shows help for a subcommand.
 func Help(name string) error {
-
 	if sort.StringsAreSorted(commandList) == false {
 		sort.Strings(commandList)
 	}
@@ -150,11 +149,11 @@ func Help(name string) error {
 	return nil
 }
 
-// Shows usage for a subcommand.
+// Usage shows a command's usage instructions.
 func Usage(name string) error {
 	entry, ok := commandNames[name]
-	if ok == false {
-		return fmt.Errorf(`No such command "%s".`, name)
+	if !ok {
+		return fmt.Errorf(`no such command %q`, name)
 	}
 	if entry.Description != "" {
 		fmt.Printf("Command \"%s\": %s\n", name, entry.Description)
@@ -167,7 +166,7 @@ func Usage(name string) error {
 		for _, argName := range entry.Arguments {
 			arg := flag.Lookup(argName)
 			if arg == nil {
-				panic(fmt.Sprintf("Flag \"-%s\" is expected for command \"%s\" but it's not defined.", argName, entry.Name))
+				log.Fatalf("Flag \"-%s\" is expected for command \"%s\" but it's not defined.", argName, entry.Name)
 			} else {
 				fmt.Printf("\t-%s [%s]: %s\n", arg.Name, arg.DefValue, arg.Usage)
 			}
@@ -177,11 +176,11 @@ func Usage(name string) error {
 	return nil
 }
 
-// Executes a subcommand.
+// Execute executes a subcommand.
 func Execute(name string) error {
 	cmd, ok := commandNames[name]
 	if ok == false {
-		return fmt.Errorf(`No such command "%s".`, name)
+		return fmt.Errorf(`no such command %q`, name)
 	}
 	err := cmd.Command.Execute()
 	if err != nil {
@@ -191,16 +190,13 @@ func Execute(name string) error {
 	return err
 }
 
-// Dispatches the subcommand.
+// Dispatch dispatches the subcommand.
 func Dispatch() error {
 	flag.Parse()
 
 	if flag.NArg() > 0 {
 		name := flag.Arg(0)
 		return Execute(name)
-	} else {
-		return Help("")
 	}
-
-	return nil
+	return Help("")
 }
