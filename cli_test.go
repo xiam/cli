@@ -43,7 +43,7 @@ func (c *command1) Execute() error {
 
 func TestRegister(t *testing.T) {
 	Register("command1", Entry{
-		Description: "Ask for for name and location",
+		Description: "Asks for your name and location",
 		Command:     &command1{},
 	})
 }
